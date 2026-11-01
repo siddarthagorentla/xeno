@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id          String   @id @default(uuid())
+  shopDomain  String   @unique
+  accessToken String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  customers Customer[]
+  orders    Order[]
+  products  Product[]
+}
+
+model Customer {
+  id          String   @id @default(uuid())
+  shopifyId   String   // numeric string from Shopify
+  firstName   String?
+  lastName    String?
+  email       String?
+  totalSpent  Decimal  @default(0.0)
+  createdAt   DateTime @default(now())
+  
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  orders      Order[]
+
+  @@unique([tenantId, shopifyId])
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  shopifyId   String
+  title       String
+  variants    String? // Storing JSON as string for SQLite
+  createdAt   DateTime @default(now())
+  
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  
+  @@unique([tenantId, shopifyId])
+}
+
+model Order {
+  id          String   @id @default(uuid())
+  shopifyId   String
+  totalPrice  Decimal
+  currency    String
+  createdAt   DateTime @default(now()) 
+  ingestedAt  DateTime @default(now())
+  
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id])
+  
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, shopifyId])
+}
